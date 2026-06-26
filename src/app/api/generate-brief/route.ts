@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateCivicBrief, performRootCauseAnalysis } from '@/lib/gemini'
 import { createBrief, updateIssue } from '@/lib/firestore'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     const { issues, neighbourhood } = await req.json()

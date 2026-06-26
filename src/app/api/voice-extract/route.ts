@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { translateAndExtractFromVoice } from '@/lib/gemini'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     const { transcript } = await req.json()

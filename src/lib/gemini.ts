@@ -1,9 +1,14 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import type { IssueCategory, IssueSeverity, Issue } from '@/types'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-const visionModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+const MODEL = 'gemini-2.0-flash'
+let _genAI: GoogleGenerativeAI | null = null
+function getGenAI() {
+  if (!_genAI) _genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+  return _genAI
+}
+function getModel() { return getGenAI().getGenerativeModel({ model: MODEL }) }
+function getVisionModel() { return getGenAI().getGenerativeModel({ model: MODEL }) }
 
 export async function analyzeIssueImage(imageBase64: string, mimeType: string) {
   const prompt = `You are a civic issue analyzer. Analyze this image and return a JSON object with:
@@ -20,7 +25,7 @@ export async function analyzeIssueImage(imageBase64: string, mimeType: string) {
 }
 Return ONLY the JSON, no markdown.`
 
-  const result = await visionModel.generateContent([
+  const result = await getVisionModel().generateContent([
     { inlineData: { data: imageBase64, mimeType } },
     prompt
   ])
@@ -44,7 +49,7 @@ Return JSON:
 }
 Return ONLY JSON, no markdown.`
 
-  const result = await visionModel.generateContent([
+  const result = await getVisionModel().generateContent([
     { inlineData: { data: originalBase64, mimeType } },
     { inlineData: { data: resolutionBase64, mimeType } },
     prompt
@@ -78,7 +83,7 @@ Generate a formal brief as JSON:
 }
 Return ONLY JSON.`
 
-  const result = await model.generateContent(prompt)
+  const result = await getModel().generateContent(prompt)
   const text = result.response.text().replace(/```json|```/g, '').trim()
   return JSON.parse(text)
 }
@@ -97,7 +102,7 @@ Analyze the pattern and return JSON:
 }
 Return ONLY JSON.`
 
-  const result = await model.generateContent(prompt)
+  const result = await getModel().generateContent(prompt)
   const text = result.response.text().replace(/```json|```/g, '').trim()
   return JSON.parse(text)
 }
@@ -121,7 +126,7 @@ export async function civicChatResponse(
   conversationHistory: { role: string; content: string }[],
   contextData: { totalIssues: number; resolvedIssues: number; neighbourhood: string }
 ) {
-  const systemContext = `You are CivicPulse AI, a helpful civic assistant. 
+  const systemContext = `You are NagarIQ AI, a helpful civic assistant. 
 Current platform stats: ${contextData.totalIssues} total issues, ${contextData.resolvedIssues} resolved, primary area: ${contextData.neighbourhood}.
 Help citizens understand issue statuses, civic processes, their rights, and how to escalate problems.
 Be concise, empathetic, and action-oriented. Answer in the same language the user writes in.`
@@ -129,7 +134,7 @@ Be concise, empathetic, and action-oriented. Answer in the same language the use
   const history = conversationHistory.map(m => `${m.role}: ${m.content}`).join('\n')
   const prompt = `${systemContext}\n\nConversation:\n${history}\nuser: ${userMessage}\nassistant:`
 
-  const result = await model.generateContent(prompt)
+  const result = await getModel().generateContent(prompt)
   return result.response.text()
 }
 
@@ -147,7 +152,7 @@ Return JSON:
 }
 Return ONLY JSON.`
 
-  const result = await model.generateContent(prompt)
+  const result = await getModel().generateContent(prompt)
   const text = result.response.text().replace(/```json|```/g, '').trim()
   return JSON.parse(text)
 }
@@ -172,7 +177,7 @@ Stats: ${JSON.stringify(stats)}
 Write a 3-paragraph executive summary covering: overall health, key wins, areas needing attention.
 Be specific and data-driven. Return plain text, no JSON.`
 
-  const result = await model.generateContent(prompt)
+  const result = await getModel().generateContent(prompt)
   return result.response.text()
 }
 
@@ -181,7 +186,7 @@ export async function generateSafetyActions(
   severity: string,
   title: string
 ) {
-  const genAI2 = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+  const genAI2 = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
   const m = genAI2.getGenerativeModel({ model: 'gemini-2.0-flash' })
   const prompt = `A civic issue was reported: "${title}" (category: ${category}, severity: ${severity}).
 The permanent fix will take time. Suggest IMMEDIATE interim safety actions to reduce harm RIGHT NOW.
@@ -210,7 +215,7 @@ export async function generateRTIApplication(issue: {
   createdAt: string
   daysOverdue: number
 }) {
-  const genAI3 = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+  const genAI3 = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
   const m = genAI3.getGenerativeModel({ model: 'gemini-2.0-flash' })
   const prompt = `Generate a complete, filing-ready Right to Information (RTI) Act 2005 application for an unresolved civic issue in India.
 
