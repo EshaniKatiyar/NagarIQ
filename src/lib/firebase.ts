@@ -2,11 +2,11 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
-// Use real env vars at runtime; fall back to a syntactically-valid dummy key
-// during build so getAuth() doesn't throw auth/invalid-api-key while Next.js
-// collects page data. The dummy is never used for real requests.
+// Real env vars at runtime. A correctly-formatted (39-char) dummy key is used
+// only during build so getAuth() passes format validation while Next.js collects
+// page data. At runtime, the real NEXT_PUBLIC_* values override these.
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDUMMY_BUILD_KEY_000000000000000000000',
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe',
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'dummy.firebaseapp.com',
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'dummy',
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'dummy.appspot.com',
