@@ -1,3 +1,5 @@
+@"
 node_modules
 .next
 .git
+"@ | Out-File -FilePath .gcloudignore -Encoding utf8

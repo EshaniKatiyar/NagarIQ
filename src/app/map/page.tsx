@@ -32,6 +32,7 @@ export default function MapPage() {
   const mapInstanceRef = useRef<any>(null)
   const markersRef = useRef<any[]>([])
   const LRef = useRef<any>(null)
+  const [mapReady, setMapReady] = useState(false)
 
   useEffect(() => {
     const unsub = subscribeToIssues(setIssues)
@@ -59,6 +60,7 @@ export default function MapPage() {
         maxZoom: 19,
       }).addTo(map)
       mapInstanceRef.current = map
+      setMapReady(true)
 
       // Try to center on user
       if (navigator.geolocation) {
@@ -104,7 +106,7 @@ export default function MapPage() {
       marker.on('click', () => setSelectedIssue(issue))
       markersRef.current.push(marker)
     })
-  }, [issues, filterSeverity, filterStatus])
+  }, [issues, filterSeverity, filterStatus, mapReady])
 
   const handleUpvote = async (issue: Issue) => {
     if (!user || issue.upvotedBy?.includes(user.uid)) return

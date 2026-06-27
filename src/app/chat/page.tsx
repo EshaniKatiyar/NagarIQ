@@ -4,7 +4,6 @@ import { useAuth } from '@/components/ui/AuthProvider'
 import { Send, Bot, User, Loader2, Zap } from 'lucide-react'
 import type { ChatMessage } from '@/types'
 import clsx from 'clsx'
-import ReactMarkdown from 'react-markdown'
 
 const SUGGESTED = [
   "What's the status of issues in Koramangala?",
@@ -23,8 +22,6 @@ export default function ChatPage() {
       timestamp: new Date()
     }
   ])
-  const [mounted, setMounted] = useState(false)
-useEffect(() => { setMounted(true) }, [])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -60,12 +57,12 @@ useEffect(() => { setMounted(true) }, [])
   return (
     <div className="max-w-3xl mx-auto h-[calc(100vh-4rem)] flex flex-col px-4 py-6">
       <div className="mb-6 flex items-center gap-3">
-        <div className="w-10 h-10 bg-civic-600 rounded-xl flex items-center justify-center">
+        <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center">
           <Zap className="w-5 h-5 text-white" />
         </div>
         <div>
           <h1 className="text-xl font-bold text-slate-900">NagarIQ AI</h1>
-          <p className="text-sm text-slate-500">Your civic intelligence assistant</p>
+          <p className="text-sm text-stone-500">Your civic intelligence assistant</p>
         </div>
         <span className="ml-auto flex items-center gap-1.5 text-xs text-green-600 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full font-medium">
           <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Online
@@ -76,7 +73,7 @@ useEffect(() => { setMounted(true) }, [])
         {messages.map((msg, i) => (
           <div key={i} className={clsx('flex gap-3', msg.role === 'user' ? 'flex-row-reverse' : 'flex-row')}>
             <div className={clsx('w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
-              msg.role === 'user' ? 'bg-civic-600' : 'bg-slate-100')}>
+              msg.role === 'user' ? 'bg-amber-500' : 'bg-sand-100')}>
               {msg.role === 'user'
                 ? <User className="w-4 h-4 text-white" />
                 : <Bot className="w-4 h-4 text-slate-600" />
@@ -84,18 +81,12 @@ useEffect(() => { setMounted(true) }, [])
             </div>
             <div className={clsx('max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
               msg.role === 'user'
-                ? 'bg-civic-600 text-white rounded-tr-sm'
+                ? 'bg-amber-500 text-white rounded-tr-sm'
                 : 'bg-white border border-slate-100 text-slate-700 rounded-tl-sm shadow-sm')}>
-              {msg.role === 'assistant' ? (
-  <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0">
-    <ReactMarkdown>{msg.content}</ReactMarkdown>
-  </div>
-) : (
-  msg.content
-)}
-              <p className={clsx('text-xs mt-1.5', msg.role === 'user' ? 'text-civic-200' : 'text-slate-400')}>
-  {mounted ? msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-</p>
+              {msg.content}
+              <p className={clsx('text-xs mt-1.5', msg.role === 'user' ? 'text-amber-100' : 'text-stone-400')}>
+                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </p>
             </div>
           </div>
         ))}
@@ -121,7 +112,7 @@ useEffect(() => { setMounted(true) }, [])
         <div className="mb-3 flex flex-wrap gap-2">
           {SUGGESTED.map(s => (
             <button key={s} onClick={() => sendMessage(s)}
-              className="text-xs bg-white border border-slate-200 text-slate-600 hover:border-civic-300 hover:text-civic-700 px-3 py-1.5 rounded-full transition-all">
+              className="text-xs bg-white border border-sand-200 text-stone-600 hover:border-amber-300 hover:text-amber-700 px-3 py-1.5 rounded-full transition-all">
               {s}
             </button>
           ))}
@@ -137,11 +128,11 @@ useEffect(() => { setMounted(true) }, [])
           className="flex-1 text-sm px-3 py-2 focus:outline-none text-slate-700 placeholder-slate-400"
         />
         <button onClick={() => sendMessage()} disabled={!input.trim() || loading}
-          className="w-9 h-9 bg-civic-600 text-white rounded-xl flex items-center justify-center hover:bg-civic-700 disabled:opacity-40 transition-all active:scale-90 flex-shrink-0">
+          className="w-9 h-9 bg-amber-500 text-white rounded-xl flex items-center justify-center hover:bg-amber-600 disabled:opacity-40 transition-all active:scale-90 flex-shrink-0">
           <Send className="w-4 h-4" />
         </button>
       </div>
-      <p className="text-xs text-slate-400 text-center mt-2">Powered by Gemini 2.5 Flash · Answers in your language</p>
+      <p className="text-xs text-slate-400 text-center mt-2">Powered by Gemini 1.5 Flash · Answers in your language</p>
     </div>
   )
 }
