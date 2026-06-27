@@ -48,21 +48,24 @@ export default function ResolveModal({ issue, onClose, onResolved }: {
           })
         })
         const verData = await verRes.json()
-setResult(verData)
-setStep('result')
+        setResult(verData)
+        setStep('result')
 
-if (verData.isResolved && verData.confidence > 70 && user) {
-  // Update Firestore from the browser (authenticated)
-  await updateIssue(issue.id, {
-    status: 'resolved',
-    resolutionPhotoURL,
-    resolutionVerified: true,
-    resolutionConfidence: verData.confidence,
-    resolvedAt: new Date(),
-  })
-  await awardPoints(user.uid, 25, 'resolution')
-  await refreshProfile()
-}
+        // If verified, actually mark the issue resolved in Firestore + award points
+        if (verData.isResolved && verData.confidence > 70) {
+          await updateIssue(issue.id, {
+            status: 'resolved',
+            resolvedAt: new Date(),
+            resolutionVerified: true,
+            resolutionConfidence: verData.confidence,
+            resolutionPhotoURL,
+          })
+          if (user) {
+            await awardPoints(user.uid, 25, 'resolution')
+            await refreshProfile()
+          }
+          onResolved?.()
+        }
       }
       reader.readAsDataURL(file)
     } catch (e) {

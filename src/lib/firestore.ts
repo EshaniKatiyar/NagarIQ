@@ -9,8 +9,12 @@ import type { Issue, UserProfile, CivicBrief, Department } from '@/types'
 
 // ── Issues ──────────────────────────────────────────────
 export async function createIssue(data: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'>) {
+  // Firestore rejects undefined values — strip them out
+  const clean = Object.fromEntries(
+    Object.entries(data).filter(([_, v]) => v !== undefined)
+  )
   const ref = await addDoc(collection(db, 'issues'), {
-    ...data,
+    ...clean,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
@@ -95,6 +99,17 @@ export async function getBriefs(): Promise<CivicBrief[]> {
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as CivicBrief))
 }
 
+export async function getBrief(id: string): Promise<CivicBrief | null> {
+  try {
+    const ref = doc(db, 'briefs', id)
+    const snap = await getDoc(ref)
+    if (snap.exists()) return { id: snap.id, ...snap.data() } as CivicBrief
+    return null
+  } catch {
+    return null
+  }
+}
+
 // ── Users ────────────────────────────────────────────────
 export async function getOrCreateUser(uid: string, data: Partial<UserProfile>): Promise<UserProfile> {
   const ref = doc(db, 'users', uid)
@@ -103,7 +118,7 @@ export async function getOrCreateUser(uid: string, data: Partial<UserProfile>): 
   const newUser: Omit<UserProfile, 'uid'> = {
     displayName: data.displayName || 'Citizen',
     email: data.email || '',
-    photoURL: data.photoURL,
+    photoURL: data.photoURL || null as any,
     neighbourhood: data.neighbourhood || 'Unknown',
     points: 0, badges: [], reportsCount: 0,
     resolvedCount: 0, verifiedCount: 0,
@@ -120,9 +135,13 @@ export async function refreshUserProfile(uid: string): Promise<UserProfile | nul
 }
 
 export async function awardPoints(userId: string, points: number, reason: string) {
-  await updateDoc(doc(db, 'users', userId), {
-    points: increment(points)
-  })
+  try {
+    await setDoc(doc(db, 'users', userId), {
+      points: increment(points)
+    }, { merge: true })
+  } catch (e) {
+    console.error('awardPoints failed (non-fatal):', e)
+  }
 }
 
 export async function getLeaderboard(neighbourhood?: string): Promise<UserProfile[]> {

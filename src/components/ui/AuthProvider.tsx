@@ -1,6 +1,6 @@
 'use client'
 import { createContext, useContext, useEffect, useState } from 'react'
-import { onAuthStateChanged, User, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth'
+import { onAuthStateChanged, User, signInWithPopup, signInAnonymously, signOut as firebaseSignOut } from 'firebase/auth'
 import { auth, googleProvider } from '@/lib/firebase'
 import { getOrCreateUser, refreshUserProfile } from '@/lib/firestore'
 import type { UserProfile } from '@/types'
@@ -10,13 +10,15 @@ interface AuthContextType {
   profile: UserProfile | null
   loading: boolean
   signIn: () => Promise<void>
+  signInAnon: () => Promise<User | null>
+  ensureUser: () => Promise<User | null>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null, profile: null, loading: true,
-  signIn: async () => {}, signOut: async () => {}, refreshProfile: async () => {}
+  signIn: async () => {}, signInAnon: async () => null, ensureUser: async () => null, signOut: async () => {}, refreshProfile: async () => {}
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -47,6 +49,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     catch (e) { console.error(e) }
   }
 
+  // Silently create an anonymous session (for guest reporting)
+  const signInAnon = async (): Promise<User | null> => {
+    try {
+      const cred = await signInAnonymously(auth)
+      return cred.user
+    } catch (e) {
+      console.error('Anon sign-in failed:', e)
+      return null
+    }
+  }
+
+  // Guarantee there's a user before an action; sign in anonymously if needed
+  const ensureUser = async (): Promise<User | null> => {
+    if (auth.currentUser) return auth.currentUser
+    return await signInAnon()
+  }
+
   const signOut = async () => {
     await firebaseSignOut(auth)
     setProfile(null)
@@ -59,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signInAnon, ensureUser, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

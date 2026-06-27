@@ -1,7 +1,7 @@
 'use client'
 import { useAuth } from '@/components/ui/AuthProvider'
 import { useEffect, useState } from 'react'
-import { getAllIssues } from '@/lib/firestore'
+import { getIssuesByNeighbourhood } from '@/lib/firestore'
 import type { Issue } from '@/types'
 import { MapPin, Award, BarChart3, Flame, LogIn, FileText, CheckCircle, Clock } from 'lucide-react'
 import Link from 'next/link'
@@ -12,6 +12,19 @@ const NEIGHBOURHOODS = [
   'Indiranagar','Koramangala','HSR Layout','Whitefield','Jayanagar',
   'Malleshwaram','Rajajinagar','Banashankari','Electronic City','Hebbal'
 ]
+
+
+function formatIssueDate(ts: any): string {
+  try {
+    let d: Date
+    if (!ts) return 'Just now'
+    if (ts.toDate) d = ts.toDate()              // Firestore Timestamp
+    else if (ts.seconds) d = new Date(ts.seconds * 1000)
+    else d = new Date(ts)
+    if (isNaN(d.getTime())) return 'Just now'
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  } catch { return 'Just now' }
+}
 
 export default function ProfilePage() {
   const { user, profile, signIn } = useAuth()
@@ -26,12 +39,13 @@ export default function ProfilePage() {
       setQrURL(url)
     }
     generateQR()
-    getAllIssues(500)
-  .then(issues => {
-    setMyIssues(issues.filter(i => i.reportedBy === user.uid))
-    setLoading(false)
-  })
-  .catch(() => setLoading(false))
+    if (profile?.neighbourhood) {
+      getIssuesByNeighbourhood(profile.neighbourhood)
+        .then(issues => {
+          setMyIssues(issues.filter(i => i.reportedBy === user.uid))
+          setLoading(false)
+        })
+    } else { setLoading(false) }
   }, [user, profile])
 
   if (!user) return (
@@ -117,7 +131,7 @@ export default function ProfilePage() {
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-900 truncate">{issue.title}</p>
-                  <p className="text-xs text-slate-400">{issue.neighbourhood} · {new Date(issue.createdAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-slate-400">{issue.neighbourhood} · {formatIssueDate(issue.createdAt)}</p>
                 </div>
                 <span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0', `status-${issue.status}`)}>
                   {issue.status}

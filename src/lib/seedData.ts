@@ -1,4 +1,4 @@
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
 import { db } from './firebase'
 
 const SEED_ISSUES = [
@@ -23,6 +23,17 @@ const SEED_ISSUES = [
   { title: 'Debris from construction on road', category: 'construction', severity: 'medium', neighbourhood: 'Electronic City', location: { lat: 12.8490, lng: 77.6640 }, upvotes: 7, status: 'reported', department: 'BBMP Building Regulation', estimatedCost: 0, description: 'Construction debris spread across road from nearby building project. Causing punctures and vehicle damage.', tags: ['construction', 'debris', 'road', 'damage'] },
   { title: 'Park lights non-functional', category: 'streetlight', severity: 'low', neighbourhood: 'Indiranagar', location: { lat: 12.9760, lng: 77.6390 }, upvotes: 11, status: 'resolved', department: 'BESCOM', estimatedCost: 15000, description: 'All lights inside the neighbourhood park fixed after 3 weeks. Park now safe to use in evenings.', tags: ['park', 'lights', 'fixed', 'resolved'], resolvedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), resolutionVerified: true, resolutionConfidence: 98 },
 ]
+
+export async function clearAllIssues() {
+  const snap = await getDocs(collection(db, 'issues'))
+  let deleted = 0
+  for (const d of snap.docs) {
+    await deleteDoc(doc(db, 'issues', d.id))
+    deleted++
+  }
+  console.log(`Cleared ${deleted} issues`)
+  return deleted
+}
 
 export async function seedDemoData(userId: string, userName: string = 'Demo Citizen') {
   console.log('Starting seed...')

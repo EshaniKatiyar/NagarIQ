@@ -29,7 +29,7 @@ const NEIGHBOURHOODS = [
 ]
 
 export default function ReportPage() {
-  const { user, signIn, refreshProfile } = useAuth()
+  const { user, signIn, ensureUser, refreshProfile } = useAuth()
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   
@@ -133,9 +133,22 @@ export default function ReportPage() {
   }, [])
 
   const handleSubmit = useCallback(async () => {
-    if (!user) { signIn(); return }
     if (!analysis) { setError('Please complete all steps.'); return }
+    // Guest reporting: ensure a user exists (anonymous if not signed in)
+    const activeUser = await ensureUser()
+    if (!activeUser) { setError('Could not start a session. Please try again.'); return }
     let finalLocation = location
+    // Known neighbourhood coords — resolve even if dropbox onChange didn't fire
+    const KNOWN_COORDS: Record<string,{lat:number,lng:number}> = {
+      'Indiranagar':{lat:12.9784,lng:77.6408},'Koramangala':{lat:12.9352,lng:77.6245},
+      'HSR Layout':{lat:12.9116,lng:77.6389},'Whitefield':{lat:12.9698,lng:77.7499},
+      'Jayanagar':{lat:12.9250,lng:77.5938},'Malleshwaram':{lat:13.0035,lng:77.5680},
+      'Rajajinagar':{lat:12.9900,lng:77.5560},'Banashankari':{lat:12.9250,lng:77.5467},
+      'Electronic City':{lat:12.8456,lng:77.6603},'Hebbal':{lat:13.0358,lng:77.5970}
+    }
+    if (!finalLocation && KNOWN_COORDS[neighbourhood.trim()]) {
+      finalLocation = KNOWN_COORDS[neighbourhood.trim()]
+    }
     // For custom neighbourhoods without coords, geocode the name (free OpenStreetMap)
     if (!finalLocation && neighbourhood.trim()) {
       try {
@@ -177,9 +190,9 @@ export default function ReportPage() {
         address,
         neighbourhood: neighbourhood || 'Unknown',
         photoURL,
-        reportedBy: user.uid,
-        reporterName: user.displayName || 'Citizen',
-        reporterAvatar: user.photoURL || undefined,
+        reportedBy: activeUser.uid,
+        reporterName: activeUser.isAnonymous ? 'Guest Citizen' : (activeUser.displayName || 'Citizen'),
+        reporterAvatar: activeUser.photoURL || undefined,
         upvotes: 0,
         upvotedBy: [],
         spottedBy: [],
@@ -191,14 +204,14 @@ export default function ReportPage() {
         escalationLevel: 0,
       })
       setIssueId(id)
-      await awardPoints(user.uid, 10, 'report')
+      await awardPoints(activeUser.uid, 10, 'report')
       await refreshProfile()
       setStep('done')
     } catch (e) {
       setError('Submission failed. Please try again.')
       setStep('confirm')
     }
-  }, [user, analysis, location, imageFile, address, neighbourhood, signIn, refreshProfile])
+  }, [user, analysis, location, imageFile, address, neighbourhood, ensureUser, refreshProfile])
 
   if (step === 'done') {
     return (
@@ -366,15 +379,15 @@ export default function ReportPage() {
             </div>
 
             {!user && (
-              <div className="card p-4 bg-civic-50 border-civic-200">
-                <p className="text-sm text-civic-700 mb-3">Sign in to submit your report and earn civic points.</p>
-                <button onClick={signIn} className="btn-primary text-sm py-2">Sign in with Google</button>
+              <div className="rounded-xl p-4 bg-amber-50 border border-amber-200">
+                <p className="text-sm text-amber-800 mb-1">You can submit as a guest — no account needed.</p>
+                <p className="text-xs text-amber-700">Want to earn civic points and track your reports? <button onClick={signIn} className="underline font-medium hover:text-amber-900">Sign in with Google</button></p>
               </div>
             )}
 
             <button onClick={handleSubmit} disabled={!neighbourhood || !neighbourhood.trim()}
               className="w-full btn-primary py-3.5 text-base font-semibold disabled:opacity-50">
-              Submit report
+              {user ? 'Submit report' : 'Submit as guest'}
             </button>
           </div>
         )}
