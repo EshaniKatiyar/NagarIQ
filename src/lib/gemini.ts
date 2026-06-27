@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import type { IssueCategory, IssueSeverity, Issue } from '@/types'
 
-const MODEL = 'gemini-2.0-flash'
+const MODEL = 'gemini-2.5-flash'
 let _genAI: GoogleGenerativeAI | null = null
 function getGenAI() {
   if (!_genAI) _genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -187,7 +187,7 @@ export async function generateSafetyActions(
   title: string
 ) {
   const genAI2 = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-  const m = genAI2.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const m = genAI2.getGenerativeModel({ model: 'gemini-2.5-flash' })
   const prompt = `A civic issue was reported: "${title}" (category: ${category}, severity: ${severity}).
 The permanent fix will take time. Suggest IMMEDIATE interim safety actions to reduce harm RIGHT NOW.
 Return ONLY this JSON:
@@ -216,7 +216,7 @@ export async function generateRTIApplication(issue: {
   daysOverdue: number
 }) {
   const genAI3 = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-  const m = genAI3.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const m = genAI3.getGenerativeModel({ model: 'gemini-2.5-flash' })
   const prompt = `Generate a complete, filing-ready Right to Information (RTI) Act 2005 application for an unresolved civic issue in India.
 
 Issue: "${issue.title}"

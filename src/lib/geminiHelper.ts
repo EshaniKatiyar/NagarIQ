@@ -9,7 +9,7 @@ function getGenAI() {
 
 // Try flash-lite first, fall back to 2.0-flash on overload/rate-limit
 const MODEL_CHAIN = [
-  'gemini-2.0-flash',
+  'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
 ]
 
