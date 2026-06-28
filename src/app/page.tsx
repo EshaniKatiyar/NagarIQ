@@ -2,6 +2,13 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Activity, Scale, Lock, Camera, Brain, Shield, ArrowRight, ArrowUpRight, Heart } from 'lucide-react'
+import { subscribeToIssues } from '@/lib/firestore'
+import { calculateCityHealth } from '@/lib/civicTwin'
+
+const BASE_NEIGHBOURHOODS = [
+  'Koramangala','Indiranagar','HSR Layout','Whitefield','Jayanagar',
+  'Malleshwaram','Banashankari','Electronic City','Rajajinagar','Hebbal'
+]
 
 const stats = [
   { value: '2,847', label: 'issues tracked' },
@@ -23,7 +30,26 @@ const flow = [
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
+  const [cityHealth, setCityHealth] = useState<number | null>(null)
   useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    const unsub = subscribeToIssues((issues) => {
+      const nbhds = Array.from(new Set([
+        ...BASE_NEIGHBOURHOODS,
+        ...issues.map(i => i.neighbourhood).filter(n => n && n !== 'Unknown')
+      ]))
+      const city = calculateCityHealth(issues, nbhds)
+      setCityHealth(city.cityHealth)
+    })
+    return unsub
+  }, [])
+
+  // City pulse: healthy = 60 BPM, critical = 140 BPM (mirrors the Civic Twin engine)
+  const health = cityHealth ?? 72
+  const cityBPM = Math.round(60 + ((100 - health) / 100) * 80)
+  const cityStatus = health >= 75 ? 'healthy' : health >= 50 ? 'strained' : health >= 30 ? 'declining' : 'critical'
+  const statusColor = health >= 75 ? 'text-green-600 bg-green-500/10' : health >= 50 ? 'text-amber-600 bg-amber-500/10' : health >= 30 ? 'text-orange-600 bg-orange-500/10' : 'text-red-500 bg-red-500/10'
+
   const fade = (d: string) => `transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} ${d}`
 
   return (
@@ -73,9 +99,9 @@ export default function Home() {
             </svg>
             <div className="inline-flex items-center gap-2 mt-2 text-sm font-medium text-stone-600">
               <Heart className="w-4 h-4 text-red-500 animate-heartbeat" fill="currentColor" />
-              <span>Koramangala</span>
-              <span className="text-stone-900 font-bold">126 BPM</span>
-              <span className="text-red-500 text-xs font-semibold bg-red-500/10 px-2 py-0.5 rounded-full">critical</span>
+              <span>Bengaluru</span>
+              <span className="text-stone-900 font-bold">{cityBPM} BPM</span>
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColor}`}>{cityStatus}</span>
             </div>
           </div>
         </div>

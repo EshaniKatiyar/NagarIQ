@@ -260,9 +260,9 @@ export default function ReportPage() {
               onDragOver={e => e.preventDefault()}
               className="card p-10 border-2 border-dashed border-civic-200 hover:border-civic-400 cursor-pointer transition-all text-center group">
               <Camera className="w-12 h-12 text-civic-300 group-hover:text-civic-500 mx-auto mb-4 transition-colors" />
-              <p className="font-semibold text-slate-700 mb-1">Upload a photo</p>
-              <p className="text-sm text-slate-400">Drag & drop or click to select • JPG, PNG, WEBP</p>
-              <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
+              <p className="font-semibold text-slate-700 mb-1">Upload a photo or a video</p>
+              <p className="text-sm text-slate-400">Drag & drop or click to select • JPG, PNG, WEBP, MP4</p>
+              <input ref={fileRef} type="file" accept="image/*,video/*" capture="environment" className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleImageSelect(f) }} />
             </div>
 

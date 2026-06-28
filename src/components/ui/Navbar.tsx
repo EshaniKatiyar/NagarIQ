@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from './AuthProvider'
 import { 
   MapPin, BarChart3, Trophy, Plus, MessageCircle, 
-  LogIn, LogOut, Menu, X, Zap, Activity, Lock
+  LogIn, LogOut, Menu, X, Zap, Activity, Lock, Scale
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/map', label: 'Live map', icon: MapPin },
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { href: '/ledger', label: 'Proof Engine', icon: Lock },
+  { href: '/rti', label: 'RTI Receipt', icon: Scale },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/chat', label: 'AI assistant', icon: MessageCircle },
 ]

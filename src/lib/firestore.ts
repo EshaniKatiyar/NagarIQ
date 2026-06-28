@@ -22,7 +22,10 @@ export async function createIssue(data: Omit<Issue, 'id' | 'createdAt' | 'update
 }
 
 export async function updateIssue(id: string, data: Partial<Issue>) {
-  await updateDoc(doc(db, 'issues', id), { ...data, updatedAt: serverTimestamp() })
+  const clean = Object.fromEntries(
+    Object.entries(data).filter(([_, v]) => v !== undefined)
+  )
+  await updateDoc(doc(db, 'issues', id), { ...clean, updatedAt: serverTimestamp() })
 }
 
 export async function getIssue(id: string): Promise<Issue | null> {

@@ -5,38 +5,47 @@ export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   try {
-    // Lazy imports - only load Firebase/Gemini at runtime, never at build
     const { generateCivicBrief, performRootCauseAnalysis } = await import('@/lib/gemini')
     const { createBrief, updateIssue } = await import('@/lib/firestore')
 
     const { issues, neighbourhood } = await req.json()
+
+    if (!issues || issues.length === 0) {
+      return NextResponse.json({ error: 'No issues provided' }, { status: 400 })
+    }
+
     const briefData = await generateCivicBrief(issues, neighbourhood)
     const rootCause = issues.length >= 3 ? await performRootCauseAnalysis(issues, neighbourhood) : null
 
+    // Build brief with safe fallbacks for every field (Firestore rejects undefined)
     const briefId = await createBrief({
-      title: briefData.title,
-      issues: issues.map((i: any) => i.id),
-      neighbourhood,
-      department: briefData.department,
+      title: briefData?.title || `Civic Brief — ${neighbourhood}`,
+      issues: issues.map((i: any) => i.id).filter(Boolean),
+      neighbourhood: neighbourhood || 'Unknown',
+      department: briefData?.department || 'Municipal Corporation',
       severity: issues[0]?.severity || 'medium',
-      affectedRadius: briefData.affectedRadius,
+      affectedRadius: briefData?.affectedRadius ?? 500,
       totalReports: issues.length,
-      estimatedCost: briefData.estimatedCost,
-      content: JSON.stringify({ ...briefData, rootCause }),
+      estimatedCost: briefData?.estimatedCost ?? 0,
+      content: JSON.stringify({ ...briefData, rootCause: rootCause || null }),
       status: 'draft',
-      shareURL: `${process.env.NEXT_PUBLIC_BASE_URL || ''}/brief/${Date.now()}`,
+      shareURL: `/brief/${Date.now()}`,
     })
 
+    // Update each issue, stripping undefined
     for (const issue of issues) {
-      await updateIssue(issue.id, {
+      if (!issue.id) continue
+      const update: any = {
         status: 'escalated',
         briefURL: `/brief/${briefId}`,
-        rootCauseNote: rootCause?.rootCause
-      })
+      }
+      if (rootCause?.rootCause) update.rootCauseNote = rootCause.rootCause
+      await updateIssue(issue.id, update)
     }
 
     return NextResponse.json({ briefId, brief: briefData, rootCause })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    console.error('generate-brief error:', e?.message, e)
+    return NextResponse.json({ error: e?.message || 'Brief generation failed' }, { status: 500 })
   }
 }

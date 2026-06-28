@@ -38,6 +38,8 @@ export interface Issue {
   resolutionConfidence?: number
   language?: string
   slaDeadline?: Date
+  deadlineBreached?: boolean
+  breachedAt?: Date
   escalationLevel?: number
   departmentRating?: number
   tags?: string[]
