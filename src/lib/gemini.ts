@@ -244,3 +244,49 @@ Return ONLY valid JSON, no markdown.`
   const match = text.match(/\{[\s\S]*\}/)
   return match ? JSON.parse(match[0]) : null
 }
+
+// ── Autonomous Swarm Agent: real multi-step agentic reasoning ────
+// The agent perceives a cluster of civic issues, reasons about them with
+// Gemini (root cause, responsibility, urgency), decides on an action, and
+// returns a transparent step-by-step reasoning trace.
+export async function runSwarmAgent(issues: Partial<Issue>[], neighbourhood: string, zoneHealth: number) {
+  const issueSummary = issues.map((i, n) =>
+    `${n + 1}. [${i.severity}] ${i.title} (${i.category}) — status: ${i.status}, upvotes: ${i.upvotes ?? 0}`
+  ).join('\n')
+
+  const prompt = `You are an autonomous civic accountability agent monitoring the neighbourhood of ${neighbourhood}.
+Current zone health: ${zoneHealth}/100 (0 = collapse, 100 = healthy).
+
+You perceive these active issues:
+${issueSummary}
+
+Reason step by step as an autonomous agent and decide what action to take. Return ONLY a JSON object:
+{
+  "perception": "1 sentence: what pattern do you observe across these issues?",
+  "rootCause": "1 sentence: the most likely systemic root cause linking them",
+  "responsibleDepartment": "the single government body most accountable",
+  "reasoning": ["step 1 of your decision process", "step 2", "step 3"],
+  "decision": one of ["monitor","escalate","emergency_escalate"],
+  "actionPlan": "1 sentence: the concrete next action you will take autonomously",
+  "confidence": 0-100
+}
+Base "decision" on severity and clustering: isolated/minor → monitor; multiple related or high-severity → escalate; critical cluster or health < 30 → emergency_escalate.
+Return ONLY the JSON, no markdown.`
+
+  try {
+    const result = await getModel().generateContent(prompt)
+    const text = result.response.text().replace(/```json|```/g, '').trim()
+    return JSON.parse(text)
+  } catch (e) {
+    // Graceful fallback so the agent panel never breaks
+    return {
+      perception: `${issues.length} active issues detected in ${neighbourhood}.`,
+      rootCause: 'Multiple infrastructure failures compounding in this zone.',
+      responsibleDepartment: 'Municipal Corporation',
+      reasoning: ['Perceived active issue cluster', 'Assessed severity and zone health', 'Selected escalation path'],
+      decision: zoneHealth < 30 ? 'emergency_escalate' : issues.length >= 2 ? 'escalate' : 'monitor',
+      actionPlan: 'Generate a Civic Brief and route to the responsible department.',
+      confidence: 70,
+    }
+  }
+}

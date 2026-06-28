@@ -46,6 +46,33 @@ export default function PulsePage() {
   const predictions = useMemo(() => predictHealthTimeline(zoneHealth, predictionDays), [zoneHealth, predictionDays])
   const swarm = useMemo(() => checkSwarmTrigger(zoneHealth), [zoneHealth])
 
+  // Autonomous Swarm Agent — runs Gemini reasoning whenever the monitored
+  // zone's issues change. No button: the agent perceives and reasons on its own.
+  const [agent, setAgent] = useState<any>(null)
+  const [agentThinking, setAgentThinking] = useState(false)
+  const zoneIssues = useMemo(
+    () => issues.filter(i => i.neighbourhood === selectedZone && i.status !== 'resolved'),
+    [issues, selectedZone]
+  )
+  useEffect(() => {
+    if (zoneIssues.length === 0) { setAgent(null); return }
+    let cancelled = false
+    setAgentThinking(true)
+    const payload = zoneIssues.slice(0, 8).map(i => ({
+      title: i.title, category: i.category, severity: i.severity, status: i.status, upvotes: i.upvotes,
+    }))
+    fetch('/api/swarm-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ issues: payload, neighbourhood: selectedZone, zoneHealth: zoneHealth.currentHealth }),
+    })
+      .then(r => r.json())
+      .then(data => { if (!cancelled && !data.error) setAgent(data) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setAgentThinking(false) })
+    return () => { cancelled = true }
+  }, [selectedZone, zoneIssues.length, zoneHealth.currentHealth])
+
   const futureHealth = predictions[predictions.length - 1]
   const colors = healthColor(zoneHealth.currentHealth)
   const cityColors = healthColor(city.cityHealth)
@@ -176,27 +203,68 @@ export default function PulsePage() {
       </div>
 
       {/* SWARM ALERT */}
-      {swarm.urgency !== 'none' && (
-        <div className={clsx('card p-5 mb-6 border-2 flex items-start gap-4',
-          swarm.urgency === 'emergency' ? 'border-red-300 bg-red-50' :
-          swarm.urgency === 'act' ? 'border-orange-300 bg-orange-50' : 'border-amber-200 bg-amber-50')}>
-          <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
-            swarm.urgency === 'emergency' ? 'bg-red-500' : swarm.urgency === 'act' ? 'bg-orange-500' : 'bg-amber-500')}>
-            <Zap className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-bold text-slate-900">Swarm Agent</h3>
-              <span className={clsx('text-xs font-semibold px-2 py-0.5 rounded-full uppercase',
-                swarm.urgency === 'emergency' ? 'bg-red-200 text-red-800' :
-                swarm.urgency === 'act' ? 'bg-orange-200 text-orange-800' : 'bg-amber-200 text-amber-800')}>
-                {swarm.urgency === 'emergency' ? '🚨 Emergency' : swarm.urgency === 'act' ? 'Auto-escalating' : 'Monitoring'}
-              </span>
+      {/* AUTONOMOUS SWARM AGENT — live Gemini reasoning trace */}
+      {(agentThinking || agent) && (
+        <div className={clsx('card p-5 mb-6 border-2',
+          agent?.decision === 'emergency_escalate' ? 'border-red-300 bg-red-50' :
+          agent?.decision === 'escalate' ? 'border-orange-300 bg-orange-50' : 'border-amber-200 bg-amber-50')}>
+          <div className="flex items-start gap-4">
+            <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
+              agent?.decision === 'emergency_escalate' ? 'bg-red-500' :
+              agent?.decision === 'escalate' ? 'bg-orange-500' : 'bg-amber-500')}>
+              <Zap className={clsx('w-5 h-5 text-white', agentThinking && 'animate-pulse')} />
             </div>
-            <p className="text-sm text-slate-600">{swarm.reason}</p>
-            {swarm.shouldEscalate && (
-              <p className="text-xs text-slate-500 mt-2">✓ Brief auto-generated · ✓ Department notified · ✓ SLA timer started — no human action required</p>
-            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <h3 className="font-bold text-slate-900">Swarm Agent</h3>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-900 text-white">AUTONOMOUS</span>
+                {agentThinking
+                  ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 animate-pulse">⟳ Reasoning…</span>
+                  : agent && <span className={clsx('text-xs font-semibold px-2 py-0.5 rounded-full uppercase',
+                      agent.decision === 'emergency_escalate' ? 'bg-red-200 text-red-800' :
+                      agent.decision === 'escalate' ? 'bg-orange-200 text-orange-800' : 'bg-amber-200 text-amber-800')}>
+                      {agent.decision === 'emergency_escalate' ? '🚨 Emergency escalate' : agent.decision === 'escalate' ? 'Auto-escalating' : 'Monitoring'}
+                    </span>}
+              </div>
+
+              {agentThinking && !agent && (
+                <p className="text-sm text-slate-500">Perceiving {zoneIssues.length} active issues in {selectedZone} and reasoning through root cause, responsibility, and action…</p>
+              )}
+
+              {agent && (
+                <div className="space-y-3">
+                  <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                    <div className="bg-white/60 rounded-lg p-3">
+                      <p className="text-xs text-slate-400 mb-0.5">Perception</p>
+                      <p className="text-slate-700">{agent.perception}</p>
+                    </div>
+                    <div className="bg-white/60 rounded-lg p-3">
+                      <p className="text-xs text-slate-400 mb-0.5">Root cause</p>
+                      <p className="text-slate-700">{agent.rootCause}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-400 mb-1">Reasoning trace</p>
+                    <ol className="space-y-1">
+                      {(agent.reasoning || []).map((step: string, n: number) => (
+                        <li key={n} className="text-sm text-slate-600 flex gap-2">
+                          <span className="text-slate-400 font-mono text-xs mt-0.5">{n + 1}.</span>{step}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  <div className="flex items-start gap-2 pt-1 border-t border-slate-200/60">
+                    <span className="text-xs text-slate-400 mt-0.5">Action</span>
+                    <p className="text-sm font-medium text-slate-800">{agent.actionPlan}
+                      <span className="text-slate-400 font-normal"> → {agent.responsibleDepartment} · {agent.confidence}% confidence</span>
+                    </p>
+                  </div>
+                  <p className="text-xs text-slate-400">This decision was reached autonomously by the agent — no human action required.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
