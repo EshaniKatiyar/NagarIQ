@@ -11,12 +11,12 @@ import clsx from 'clsx'
 
 const navItems = [
   { href: '/pulse', label: 'Civic Twin', icon: Activity },
-  { href: '/map', label: 'Live map', icon: MapPin },
+  { href: '/map', label: 'Map', icon: MapPin },
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
-  { href: '/ledger', label: 'Proof Engine', icon: Lock },
-  { href: '/rti', label: 'RTI Receipt', icon: Scale },
-  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { href: '/chat', label: 'AI assistant', icon: MessageCircle },
+  { href: '/ledger', label: 'Proof', icon: Lock },
+  { href: '/rti', label: 'RTI', icon: Scale },
+  { href: '/leaderboard', label: 'Ranks', icon: Trophy },
+  { href: '/chat', label: 'Assistant', icon: MessageCircle },
 ]
 
 export default function Navbar() {
@@ -34,16 +34,16 @@ export default function Navbar() {
           <span className="text-stone-900">Nagar<span className="text-amber-600">IQ</span></span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden md:flex items-center gap-0.5">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href}
               className={clsx(
-                'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                'flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
                 pathname === href
                   ? 'bg-amber-50 text-amber-700'
                   : 'text-stone-600 hover:bg-sand-100 hover:text-stone-900'
               )}>
-              <Icon className="w-4 h-4" />
+              <Icon className="w-4 h-4 shrink-0" />
               {label}
             </Link>
           ))}

@@ -1,7 +1,7 @@
 'use client'
 import { useAuth } from '@/components/ui/AuthProvider'
 import { useEffect, useState } from 'react'
-import { getIssuesByNeighbourhood } from '@/lib/firestore'
+import { subscribeToIssues } from '@/lib/firestore'
 import type { Issue } from '@/types'
 import { MapPin, Award, BarChart3, Flame, LogIn, FileText, CheckCircle, Clock } from 'lucide-react'
 import Link from 'next/link'
@@ -39,13 +39,12 @@ export default function ProfilePage() {
       setQrURL(url)
     }
     generateQR()
-    if (profile?.neighbourhood) {
-      getIssuesByNeighbourhood(profile.neighbourhood)
-        .then(issues => {
-          setMyIssues(issues.filter(i => i.reportedBy === user.uid))
-          setLoading(false)
-        })
-    } else { setLoading(false) }
+    // Fetch ALL issues, then filter to this user (works regardless of neighbourhood)
+    const unsub = subscribeToIssues((allIssues) => {
+      setMyIssues(allIssues.filter(i => i.reportedBy === user.uid))
+      setLoading(false)
+    })
+    return unsub
   }, [user, profile])
 
   if (!user) return (
@@ -68,15 +67,26 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      {user.isAnonymous && (
+        <div className="mb-6 rounded-2xl bg-amber-50 border border-amber-200 p-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+          <div>
+            <h3 className="font-bold text-amber-900 mb-0.5">You&apos;re browsing as a guest</h3>
+            <p className="text-sm text-amber-700">Sign in with Google to save your reports, points, and badges across sessions.</p>
+          </div>
+          <button onClick={signIn} className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+            Sign in with Google
+          </button>
+        </div>
+      )}
       <div className="card p-6 mb-6">
         <div className="flex items-start gap-5">
           {user.photoURL
             ? <img src={user.photoURL} alt="" className="w-20 h-20 rounded-2xl border-4 border-civic-100" />
-            : <div className="w-20 h-20 bg-civic-100 text-civic-700 rounded-2xl flex items-center justify-center text-3xl font-bold">{user.displayName?.[0]}</div>
+            : <div className="w-20 h-20 bg-civic-100 text-civic-700 rounded-2xl flex items-center justify-center text-3xl font-bold">{user.isAnonymous ? 'G' : (user.displayName?.[0] || 'C')}</div>
           }
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-slate-900">{user.displayName}</h1>
-            <p className="text-slate-500 text-sm">{user.email}</p>
+            <h1 className="text-2xl font-bold text-slate-900">{user.isAnonymous ? 'Guest Citizen' : user.displayName}</h1>
+            <p className="text-slate-500 text-sm">{user.isAnonymous ? 'Reporting anonymously' : user.email}</p>
             <div className="flex items-center gap-2 mt-2">
               <MapPin className="w-4 h-4 text-slate-400" />
               <span className="text-sm text-slate-600">{profile?.neighbourhood || 'Neighbourhood not set'}</span>

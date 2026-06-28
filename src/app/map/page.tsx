@@ -85,26 +85,49 @@ export default function MapPage() {
     const filtered = issues.filter(i => {
       if (filterSeverity !== 'all' && i.severity !== filterSeverity) return false
       if (filterStatus !== 'all' && i.status !== filterStatus) return false
-      return i.location && i.location.lat && i.location.lng
+      const loc: any = i.location
+      if (!loc) return false
+      const lat = loc.lat ?? loc.latitude ?? loc._lat
+      const lng = loc.lng ?? loc.longitude ?? loc._long
+      return typeof lat === 'number' && typeof lng === 'number'
     })
 
     filtered.forEach(issue => {
-      const size = issue.upvotes > 10 ? 40 : issue.upvotes > 5 ? 34 : 28
-      const icon = L.divIcon({
-        className: 'custom-marker',
-        html: `<div style="
-          width:${size}px;height:${size}px;
-          background:${SEVERITY_COLORS[issue.severity]};
-          border:3px solid white;border-radius:50%;
-          display:flex;align-items:center;justify-content:center;
-          font-size:${size/2}px;box-shadow:0 2px 8px rgba(0,0,0,0.3);
-          cursor:pointer;">${CATEGORY_ICONS[issue.category] || '⚠️'}</div>`,
-        iconSize: [size, size],
-        iconAnchor: [size/2, size/2],
-      })
-      const marker = L.marker([issue.location.lat, issue.location.lng], { icon }).addTo(map)
-      marker.on('click', () => setSelectedIssue(issue))
-      markersRef.current.push(marker)
+      try {
+        const upvotes = issue.upvotes || 0
+        const size = upvotes > 10 ? 40 : upvotes > 5 ? 34 : 28
+        const color = SEVERITY_COLORS[issue.severity] || '#6b7280'
+        const catIcon = CATEGORY_ICONS[issue.category] || '⚠️'
+        const icon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="
+            width:${size}px;height:${size}px;
+            background:${color};
+            border:3px solid white;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            font-size:${size/2}px;box-shadow:0 2px 8px rgba(0,0,0,0.3);
+            cursor:pointer;">${catIcon}</div>`,
+          iconSize: [size, size],
+          iconAnchor: [size/2, size/2],
+        })
+        const loc: any = issue.location
+        let mlat = Number(loc.lat ?? loc.latitude ?? loc._lat)
+        let mlng = Number(loc.lng ?? loc.longitude ?? loc._long)
+        if (!isFinite(mlat) || !isFinite(mlng)) {
+          console.warn('Skipping issue with bad coords:', issue.id, loc)
+          return
+        }
+        // Nudge pins that share identical coords so they don't hide each other.
+        // Deterministic tiny offset derived from the issue id.
+        const seed = (issue.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+        mlat += ((seed % 20) - 10) * 0.00015
+        mlng += (((seed >> 2) % 20) - 10) * 0.00015
+        const marker = L.marker([mlat, mlng], { icon }).addTo(map)
+        marker.on('click', () => setSelectedIssue(issue))
+        markersRef.current.push(marker)
+      } catch (err) {
+        console.error('Failed to render marker for issue:', issue.id, err)
+      }
     })
   }, [issues, filterSeverity, filterStatus, mapReady])
 
