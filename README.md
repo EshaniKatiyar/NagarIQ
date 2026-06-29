@@ -4,7 +4,7 @@
 
 An autonomous, AI-native platform that converts a single citizen report into legally enforceable pressure on local government — built solo, end-to-end, and deployed in production on Google Cloud.
 
-** Live App:** https://nagariq-135934398714.asia-south1.run.app
+**Live App:** https://nagariq-135934398714.asia-south1.run.app
 
 ---
 
